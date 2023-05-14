@@ -15,6 +15,12 @@
 
 #define SERVER_PORT 6666
 
+/*
+ * 服务端:
+ * 连接的套接字:sock,使用socket()创建
+ * 通信的套接字:client_sock,由accept()函数接收
+ */
+
 int main(void)
 {
     int sock;                       // 代表邮箱fd(连接的套接字)
@@ -31,10 +37,6 @@ int main(void)
     server_addr.sin_family = AF_INET;                // 选择协议族->IPV4
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // 监听本地所以IP地址  long       转换结果是32 位uint32_t整数
     server_addr.sin_port = htons(SERVER_PORT);       // 绑定端口号          short
-
-    // 端口复用
-    int optval = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)); // sock监听的文件描述符
 
     // 4.使用 bind() 函数将套接字绑定到指定地址。
     //  实现标签贴到收信的邮箱上
@@ -61,7 +63,6 @@ int main(void)
 
         socklen_t client_addr_len;
         client_addr_len = sizeof(client);
-
         // 6.使用 accept() 函数接受客户端的连接请求，并返回一个新的套接字与客户端进行通信。
         client_sock = accept(sock, (struct sockaddr *)&client, &client_addr_len);
         // 因为第三个参数是传入传出参数,所以不能下成下面这样:
@@ -76,35 +77,36 @@ int main(void)
                          sizeof(client_ip)),
                ntohs(client.sin_port));
 
-        while (1)
+        // while (1)
+        //{
+        //  读取连接到的客户端发送的数据(读进来)
+        len = read(client_sock, buf, sizeof(buf) - 1); // 留一格存放字符串结束符,read函数只执行一次
+
+        buf[len] = '\0';
+        printf("recive[%d] :%s\n", len, buf);
+
+        // 将buf全部改成大写再写回去
+        for (int i = 0; i < len; i++)
         {
-            memset(buf, '\0', sizeof buf); // 收之前先把缓存区清空
-            //  读取连接到的客户端发送的数据(读进来)
-            len = read(client_sock, buf, sizeof(buf) - 1); // 留一格存放字符串结束符,read函数只执行一次
-            printf("本次读了len: %d个字符\n", len);
-            if (len == 0)
-            { // 对方断开了连接
-                close(client_sock);
-                break;
+            if (isalpha(buf[i])) // 如果是字符
+            {
+                buf[i] = toupper(buf[i]);
             }
-            buf[len] = '\0';
-            printf("Clinet :%s\n", buf); // 打印读到的信息
-
-            fgets(buf, sizeof(buf), stdin); // 讲自己想说的话，写入buf
-
-            len = write(client_sock, buf, strlen(buf));
-            printf(" 发送了 %d个字符\n", len);
         }
+        //(写回去)
+        len = write(client_sock, buf, len);
+        printf("write finished.has written data:%s,has written len : %d\n", buf, len);
+        close(client_sock);
+        //}
     }
     return 0;
 }
-// gcc homework_s.c -o s
-// gcc homework_c.c -o c
 
-// Do you like C++?
-// Yes, I do.
-// Why do you like C++?
-// Because I can use it to write programs.
-// And you?
-
-// Me too.
+// gcc -std=c99 echo_server.c -o echo_server
+// 在cmd或者其他linux终端中输入和服务器进行连接: telnet 192.168.8.129 6666
+/*
+查看端口为6666的进程:
+sudo su
+netstat -tlnp | grep :6666
+kill 12345
+*/
