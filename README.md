@@ -13,3 +13,6 @@ for(int i = 0 ; i < len ; i ++)
   }
 }
 ```
+杀死霸占当前项目端口号的进程
+![image](https://github.com/1AoB/echo_server/assets/78208268/a4f636bd-0918-4b73-b070-987ec1d0f207)
+
